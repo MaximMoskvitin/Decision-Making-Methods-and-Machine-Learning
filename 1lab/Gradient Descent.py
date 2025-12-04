@@ -8,6 +8,23 @@ import matplotlib.pyplot as plt
 
 
 # ==========================
+# НАСТРОЙКИ ОБУЧЕНИЯ
+# ==========================
+
+# Параметры обучения для квадратичной регрессии
+QUAD_LEARNING_RATE = 0.01
+QUAD_EPOCHS = 1000
+
+# Параметры обучения для линейной регрессии
+LIN_LEARNING_RATE = 0.01
+LIN_EPOCHS = 1000
+
+# Доля объектов, идущих в тестовую выборку
+TEST_SIZE = 0.2
+RANDOM_SEED = 42
+
+
+# ==========================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ==========================
 
@@ -18,50 +35,102 @@ def mse_loss(y_true, y_pred):
     return tf.reduce_mean((y_true - y_pred) ** 2)
 
 
-def create_quadratic_dataset(m, min_value, max_value,
-                             k1_true, k0_true, b_true,
-                             noise_std=1.0):
+def create_quadratic_dataset(m,
+                             min_value,
+                             max_value,
+                             k1_true,
+                             k0_true,
+                             b_true,
+                             noise_std=1.0,
+                             seed=None):
     """
-    Создаём данные для квадратичной регрессии:
-    x ~ U[min_value, max_value]
-    N ~ N(0, noise_std^2)
-    y = k1_true * x^2 + k0_true * x + b_true + N
+    Создание искусственных данных для квадратичной регрессии.
+    y = k1 * x^2 + k0 * x + b + noise
     """
-    # тензор равномерно распределённых случайных величин
+    if seed is not None:
+        tf.random.set_seed(seed)
+        np.random.seed(seed)
+
     x = tf.random.uniform(shape=(m,),
                           minval=min_value,
-                          maxval=max_value)
+                          maxval=max_value,
+                          dtype=tf.float32)
 
-    # тензор нормально распределённых случайных величин
     noise = tf.random.normal(shape=(m,),
                              mean=0.0,
-                             stddev=noise_std)
+                             stddev=noise_std,
+                             dtype=tf.float32)
 
     y = k1_true * x ** 2 + k0_true * x + b_true + noise
+    return x.numpy(), noise.numpy(), y.numpy()
 
-    return x, noise, y
 
-
-def create_linear_dataset(m, min_value, max_value,
-                          k0_true, b_true,
-                          noise_std=1.0):
+def create_linear_dataset(m,
+                          min_value,
+                          max_value,
+                          k0_true,
+                          b_true,
+                          noise_std=1.0,
+                          seed=None):
     """
-    Создаём данные для линейной регрессии:
-    x ~ U[min_value, max_value]
-    N ~ N(0, noise_std^2)
-    y = k0_true * x + b_true + N
+    Создание искусственных данных для линейной регрессии.
+    y = k0 * x + b + noise
     """
+    if seed is not None:
+        tf.random.set_seed(seed)
+        np.random.seed(seed)
+
     x = tf.random.uniform(shape=(m,),
                           minval=min_value,
-                          maxval=max_value)
+                          maxval=max_value,
+                          dtype=tf.float32)
 
     noise = tf.random.normal(shape=(m,),
                              mean=0.0,
-                             stddev=noise_std)
+                             stddev=noise_std,
+                             dtype=tf.float32)
 
     y = k0_true * x + b_true + noise
+    return x.numpy(), noise.numpy(), y.numpy()
 
-    return x, noise, y
+
+def train_test_split_numpy(x, y, test_size=0.2, seed=42):
+    """
+    Простое разбиение numpy-массивов x и y на обучающую и тестовую выборки.
+    """
+    rng = np.random.RandomState(seed)
+    indices = np.arange(x.shape[0])
+    rng.shuffle(indices)
+
+    test_count = int(len(indices) * test_size)
+    test_idx = indices[:test_count]
+    train_idx = indices[test_count:]
+
+    x_train, y_train = x[train_idx], y[train_idx]
+    x_test, y_test = x[test_idx], y[test_idx]
+
+    return x_train, x_test, y_train, y_test
+
+
+def inspect_dataset(x, noise, y, title):
+    """
+    Печать основных характеристик набора данных и базовый scatter-график.
+    """
+    print(title)
+    print("Форма x:", x.shape)
+    print("Форма шума noise:", noise.shape)
+    print("Форма y:", y.shape)
+    print("Пример первых 5 значений x:", x[:5])
+    print("Пример первых 5 значений y:", y[:5], "\n")
+
+    plt.figure(figsize=(6, 4))
+    plt.scatter(x, y, label="исходные данные", alpha=0.7)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(title)
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
 
 def plot_loss(loss_history, title):
@@ -77,62 +146,62 @@ def plot_loss(loss_history, title):
     plt.show()
 
 
-def plot_quadratic_fit(x, y,
+def plot_quadratic_fit(x_train, y_train,
+                       x_test, y_test,
                        k1_true, k0_true, b_true,
-                       k1_learned, k0_learned, b_learned,
-                       title):
+                       k1_learned, k0_learned, b_learned):
     """
-    Визуализация: точки выборки, истинный полином, найденный полином.
+    Визуализация квадратичной регрессии:
+      - точки обучающей и тестовой выборок
+      - истинный полином и найденный полином.
     """
-    x_np = x.numpy()
-    y_np = y.numpy()
-
-    xs = np.linspace(x_np.min() - 0.5,
-                     x_np.max() + 0.5,
-                     400)
-
-    # истинный полином
-    ys_true = k1_true * xs ** 2 + k0_true * xs + b_true
-
-    # полином, полученный после обучения
-    ys_model = k1_learned * xs ** 2 + k0_learned * xs + b_learned
-
     plt.figure(figsize=(6, 4))
-    plt.scatter(x_np, y_np, alpha=0.5, label="данные")
-    plt.plot(xs, ys_true, '--', label="истинный полином", linewidth=2)
-    plt.plot(xs, ys_model, label="найденный полином", linewidth=2)
+
+    # Строим полиномы по всей области значений
+    x_all = np.linspace(x_train.min(), x_train.max(), 200)
+    y_true_all = k1_true * x_all ** 2 + k0_true * x_all + b_true
+    y_pred_all = k1_learned * x_all ** 2 + k0_learned * x_all + b_learned
+
+    # Обучающие и тестовые точки
+    plt.scatter(x_train, y_train, label="обучающие точки", alpha=0.7)
+    plt.scatter(x_test, y_test, label="тестовые точки", alpha=0.7)
+
+    # Линии истинного и найденного полиномов
+    plt.plot(x_all, y_true_all, label="истинный полином", linewidth=2)
+    plt.plot(x_all, y_pred_all, label="найденный полином", linewidth=2, linestyle="--")
+
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title(title)
+    plt.title("Квадратичная регрессия: истинная и найденная модель")
     plt.grid(True)
     plt.legend()
     plt.show()
 
 
-def plot_linear_fit(x, y,
+def plot_linear_fit(x_train, y_train,
+                    x_test, y_test,
                     k0_true, b_true,
-                    k0_learned, b_learned,
-                    title):
+                    k0_learned, b_learned):
     """
-    Визуализация: точки выборки, истинная прямая, найденная прямая.
+    Визуализация линейной регрессии:
+      - точки обучающей и тестовой выборок
+      - истинная прямая и найденная прямая.
     """
-    x_np = x.numpy()
-    y_np = y.numpy()
-
-    xs = np.linspace(x_np.min() - 0.5,
-                     x_np.max() + 0.5,
-                     400)
-
-    ys_true = k0_true * xs + b_true
-    ys_model = k0_learned * xs + b_learned
-
     plt.figure(figsize=(6, 4))
-    plt.scatter(x_np, y_np, alpha=0.5, label="данные")
-    plt.plot(xs, ys_true, '--', label="истинная прямая", linewidth=2)
-    plt.plot(xs, ys_model, label="найденная прямая", linewidth=2)
+
+    x_all = np.linspace(x_train.min(), x_train.max(), 200)
+    y_true_all = k0_true * x_all + b_true
+    y_pred_all = k0_learned * x_all + b_learned
+
+    plt.scatter(x_train, y_train, label="обучающие точки", alpha=0.7)
+    plt.scatter(x_test, y_test, label="тестовые точки", alpha=0.7)
+
+    plt.plot(x_all, y_true_all, label="истинная прямая", linewidth=2)
+    plt.plot(x_all, y_pred_all, label="найденная прямая", linewidth=2, linestyle="--")
+
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title(title)
+    plt.title("Линейная регрессия: истинная и найденная модель")
     plt.grid(True)
     plt.legend()
     plt.show()
@@ -142,76 +211,69 @@ def plot_linear_fit(x, y,
 # ГРАДИЕНТНЫЙ СПУСК: ОБУЧЕНИЕ
 # ==========================
 
-def train_quadratic_regression(x, y,
-                               learning_rate=0.01,
-                               epochs=1000):
+def train_quadratic_regression(x_train, y_train,
+                               learning_rate=QUAD_LEARNING_RATE,
+                               epochs=QUAD_EPOCHS):
     """
     Обучение квадратичной регрессии методом градиентного спуска.
     Модель: y_hat = k1 * x^2 + k0 * x + b
     """
+    x_train_tf = tf.constant(x_train, dtype=tf.float32)
+    y_train_tf = tf.constant(y_train, dtype=tf.float32)
+
     # инициализация весов модели как тензоров tf.Variable
-    k1 = tf.Variable(tf.random.normal(shape=()),
-                     name="k1")
-    k0 = tf.Variable(tf.random.normal(shape=()),
-                     name="k0")
-    b = tf.Variable(tf.random.normal(shape=()),
-                    name="b")
+    k1 = tf.Variable(tf.random.normal(shape=()), name="k1")
+    k0 = tf.Variable(tf.random.normal(shape=()), name="k0")
+    b = tf.Variable(tf.random.normal(shape=()), name="b")
 
-    # оптимизатор градиентного спуска
     optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
-
     loss_history = []
 
     for epoch in range(epochs):
         with tf.GradientTape() as tape:
-            y_pred = k1 * x ** 2 + k0 * x + b
-            loss = mse_loss(y, y_pred)
+            y_pred = k1 * x_train_tf ** 2 + k0 * x_train_tf + b
+            loss = mse_loss(y_train_tf, y_pred)
 
-        # вычисляем градиенты по трём параметрам
         grads = tape.gradient(loss, [k1, k0, b])
-
-        # делаем шаг градиентного спуска
         optimizer.apply_gradients(zip(grads, [k1, k0, b]))
 
-        loss_history.append(float(loss.numpy()))
+        loss_history.append(loss.numpy())
 
-        # выводим промежуточную информацию каждые 100 эпох
-        if epoch % 100 == 0:
-            print(f"Epoch {epoch:4d}: loss = {loss.numpy():.4f}", end='\n')
-            print(f"  k1 = {k1.numpy():.4f}, k0 = {k0.numpy():.4f}, b = {b.numpy():.4f}", end='\n\n')
+        # периодически выводим информацию об обучении
+        if (epoch + 1) % max(1, epochs // 10) == 0 or epoch == 0:
+            print(f"[КВАДРАТИЧНАЯ] Epoch {epoch + 1:4d}/{epochs}: loss = {loss.numpy():.6f}")
 
     return k1.numpy(), k0.numpy(), b.numpy(), loss_history
 
 
-def train_linear_regression(x, y,
-                            learning_rate=0.01,
-                            epochs=500):
+def train_linear_regression(x_train, y_train,
+                            learning_rate=LIN_LEARNING_RATE,
+                            epochs=LIN_EPOCHS):
     """
     Обучение линейной регрессии методом градиентного спуска.
     Модель: y_hat = k0 * x + b
     """
-    k0 = tf.Variable(tf.random.normal(shape=()),
-                     name="k0")
-    b = tf.Variable(tf.random.normal(shape=()),
-                    name="b")
+    x_train_tf = tf.constant(x_train, dtype=tf.float32)
+    y_train_tf = tf.constant(y_train, dtype=tf.float32)
+
+    k0 = tf.Variable(tf.random.normal(shape=()), name="k0_linear")
+    b = tf.Variable(tf.random.normal(shape=()), name="b_linear")
 
     optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
-
     loss_history = []
 
     for epoch in range(epochs):
         with tf.GradientTape() as tape:
-            y_pred = k0 * x + b
-            loss = mse_loss(y, y_pred)
+            y_pred = k0 * x_train_tf + b
+            loss = mse_loss(y_train_tf, y_pred)
 
         grads = tape.gradient(loss, [k0, b])
         optimizer.apply_gradients(zip(grads, [k0, b]))
 
-        loss_history.append(float(loss.numpy()))
+        loss_history.append(loss.numpy())
 
-        if epoch % 100 == 0:
-            print(f"Epoch {epoch:4d}: loss = {loss.numpy():.4f}", end='\n')
-            print(f"  k0 = {k0.numpy():.4f}, b = {b.numpy():.4f}", end='\n\n')
+        if (epoch + 1) % max(1, epochs // 10) == 0 or epoch == 0:
+            print(f"[ЛИНЕЙНАЯ]     Epoch {epoch + 1:4d}/{epochs}: loss = {loss.numpy():.6f}")
 
     return k0.numpy(), b.numpy(), loss_history
 
@@ -221,91 +283,93 @@ def train_linear_regression(x, y,
 # ==========================
 
 def main():
-    # фиксируем seed'ы для воспроизводимости
-    tf.random.set_seed(42)
-    np.random.seed(42)
+    # фиксируем seed для воспроизводимости
+    tf.random.set_seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
 
-    # ----------------------
-    # ЧАСТЬ 1. КВАДРАТИЧНАЯ РЕГРЕССИЯ
-    # ----------------------
-    print("=== ЧАСТЬ 1. КВАДРАТИЧНАЯ РЕГРЕССИЯ ===", end='\n\n')
+    # -------------
+    # Часть 1. Квадратичная регрессия
+    # -------------
 
-    m = 200
-    min_value = -3.0
-    max_value = 3.0
-    noise_std = 1.0
+    print("=== ЧАСТЬ 1. КВАДРАТИЧНАЯ РЕГРЕССИЯ ===\n")
 
-    # истинные параметры модели
+    m_quad = 200
+    min_value_quad = -3.0
+    max_value_quad = 3.0
+
     k1_true = 0.7
     k0_true = -1.2
     b_true = 2.0
+    noise_std_quad = 1.0
 
-    # создаём искусственные данные
     x_quad, noise_quad, y_quad = create_quadratic_dataset(
-        m=m,
-        min_value=min_value,
-        max_value=max_value,
+        m=m_quad,
+        min_value=min_value_quad,
+        max_value=max_value_quad,
         k1_true=k1_true,
         k0_true=k0_true,
         b_true=b_true,
-        noise_std=noise_std
+        noise_std=noise_std_quad,
+        seed=RANDOM_SEED
     )
 
-    print("Примеры значений тензоров для квадратичной регрессии:", end='\n')
-    print("x_quad shape:", x_quad.shape, end='\n')
-    print("noise_quad shape:", noise_quad.shape, end='\n')
-    print("y_quad shape:", y_quad.shape, end='\n\n')
+    inspect_dataset(x_quad, noise_quad, y_quad,
+                    "Искусственные данные (квадратичная регрессия)")
 
-    # визуализируем исходную зависимость
-    plt.figure(figsize=(6, 4))
-    plt.scatter(x_quad.numpy(), y_quad.numpy(), alpha=0.5, label="данные")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Искусственные данные (квадратичная регрессия)")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
+    # разделяем данные на обучающую и тестовую выборки
+    x_quad_train, x_quad_test, y_quad_train, y_quad_test = train_test_split_numpy(
+        x_quad,
+        y_quad,
+        test_size=TEST_SIZE,
+        seed=RANDOM_SEED
+    )
 
-    # обучаем модель методом градиентного спуска
+    print("Размер обучающей выборки (квадрат):", x_quad_train.shape[0])
+    print("Размер тестовой выборки (квадрат):", x_quad_test.shape[0], "\n")
+
+    # обучаем модель на обучающей выборке
     k1_learned, k0_learned, b_learned, loss_history_quad = train_quadratic_regression(
-        x_quad,
-        y_quad,
-        learning_rate=0.01,
-        epochs=1000
+        x_quad_train,
+        y_quad_train,
+        learning_rate=QUAD_LEARNING_RATE,
+        epochs=QUAD_EPOCHS
     )
 
-    # вывод сравнения параметров
-    print("Истинные параметры квадратичной модели:", end='\n')
-    print(f"  k1_true = {k1_true:.4f}, k0_true = {k0_true:.4f}, b_true = {b_true:.4f}", end='\n\n')
+    # оцениваем качество на train и test
+    y_quad_train_pred = k1_learned * x_quad_train ** 2 + k0_learned * x_quad_train + b_learned
+    y_quad_test_pred = k1_learned * x_quad_test ** 2 + k0_learned * x_quad_test + b_learned
 
-    print("Найденные параметры квадратичной модели:", end='\n')
-    print(f"  k1 = {k1_learned:.4f}, k0 = {k0_learned:.4f}, b = {b_learned:.4f}", end='\n\n')
+    train_mse_quad = np.mean((y_quad_train - y_quad_train_pred) ** 2)
+    test_mse_quad = np.mean((y_quad_test - y_quad_test_pred) ** 2)
 
-    # график функции потерь
+    print(f"[КВАДРАТИЧНАЯ] Итоговые параметры:")
+    print(f"  истинные:   k1 = {k1_true:.3f}, k0 = {k0_true:.3f}, b = {b_true:.3f}")
+    print(f"  найденные:  k1 = {k1_learned:.3f}, k0 = {k0_learned:.3f}, b = {b_learned:.3f}")
+    print(f"  MSE на train: {train_mse_quad:.4f}")
+    print(f"  MSE на test:  {test_mse_quad:.4f}\n")
+
     plot_loss(loss_history_quad,
-              title="Функция потерь (квадратичная регрессия)")
-
-    # визуализация полиномов
+              title="Изменение функции потерь (квадратичная регрессия)")
     plot_quadratic_fit(
-        x_quad,
-        y_quad,
+        x_quad_train, y_quad_train,
+        x_quad_test, y_quad_test,
         k1_true, k0_true, b_true,
-        k1_learned, k0_learned, b_learned,
-        title="Аппроксимация квадратичной зависимости"
+        k1_learned, k0_learned, b_learned
     )
 
-    # ----------------------
-    # ЧАСТЬ 2. ЛИНЕЙНАЯ РЕГРЕССИЯ
-    # ----------------------
-    print("=== ЧАСТЬ 2. ЛИНЕЙНАЯ РЕГРЕССИЯ ===", end='\n\n')
+    # -------------
+    # Часть 2. Линейная регрессия
+    # -------------
+
+    print("\n=== ЧАСТЬ 2. ЛИНЕЙНАЯ РЕГРЕССИЯ ===\n")
 
     m_lin = 200
-    min_value_lin = -5.0
-    max_value_lin = 5.0
-    noise_std_lin = 1.0
+    min_value_lin = -3.0
+    max_value_lin = 3.0
 
-    k0_true_lin = 1.5
-    b_true_lin = -0.5
+    k0_true_lin = 2.5
+    b_true_lin = -1.0
+    noise_std_lin = 1.0
 
     x_lin, noise_lin, y_lin = create_linear_dataset(
         m=m_lin,
@@ -313,50 +377,55 @@ def main():
         max_value=max_value_lin,
         k0_true=k0_true_lin,
         b_true=b_true_lin,
-        noise_std=noise_std_lin
+        noise_std=noise_std_lin,
+        seed=RANDOM_SEED
     )
 
-    print("Примеры значений тензоров для линейной регрессии:", end='\n')
-    print("x_lin shape:", x_lin.shape, end='\n')
-    print("noise_lin shape:", noise_lin.shape, end='\n')
-    print("y_lin shape:", y_lin.shape, end='\n\n')
+    inspect_dataset(x_lin, noise_lin, y_lin,
+                    "Искусственные данные (линейная регрессия)")
 
-    plt.figure(figsize=(6, 4))
-    plt.scatter(x_lin.numpy(), y_lin.numpy(), alpha=0.5, label="данные")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Искусственные данные (линейная регрессия)")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
+    x_lin_train, x_lin_test, y_lin_train, y_lin_test = train_test_split_numpy(
+        x_lin,
+        y_lin,
+        test_size=TEST_SIZE,
+        seed=RANDOM_SEED
+    )
+
+    print("Размер обучающей выборки (линейная):", x_lin_train.shape[0])
+    print("Размер тестовой выборки (линейная):", x_lin_test.shape[0], "\n")
 
     k0_learned_lin, b_learned_lin, loss_history_lin = train_linear_regression(
-        x_lin,
-        y_lin,
-        learning_rate=0.01,
-        epochs=500
+        x_lin_train,
+        y_lin_train,
+        learning_rate=LIN_LEARNING_RATE,
+        epochs=LIN_EPOCHS
     )
 
-    print("Истинные параметры линейной модели:", end='\n')
-    print(f"  k0_true = {k0_true_lin:.4f}, b_true = {b_true_lin:.4f}", end='\n\n')
+    y_lin_train_pred = k0_learned_lin * x_lin_train + b_learned_lin
+    y_lin_test_pred = k0_learned_lin * x_lin_test + b_learned_lin
 
-    print("Найденные параметры линейной модели:", end='\n')
-    print(f"  k0 = {k0_learned_lin:.4f}, b = {b_learned_lin:.4f}", end='\n\n')
+    train_mse_lin = np.mean((y_lin_train - y_lin_train_pred) ** 2)
+    test_mse_lin = np.mean((y_lin_test - y_lin_test_pred) ** 2)
+
+    print(f"[ЛИНЕЙНАЯ]     Итоговые параметры:")
+    print(f"  истинные:   k0 = {k0_true_lin:.3f}, b = {b_true_lin:.3f}")
+    print(f"  найденные:  k0 = {k0_learned_lin:.3f}, b = {b_learned_lin:.3f}")
+    print(f"  MSE на train: {train_mse_lin:.4f}")
+    print(f"  MSE на test:  {test_mse_lin:.4f}\n")
 
     plot_loss(loss_history_lin,
-              title="Функция потерь (линейная регрессия)")
-
+              title="Изменение функции потерь (линейная регрессия)")
     plot_linear_fit(
-        x_lin,
-        y_lin,
+        x_lin_train, y_lin_train,
+        x_lin_test, y_lin_test,
         k0_true_lin, b_true_lin,
-        k0_learned_lin, b_learned_lin,
-        title="Аппроксимация линейной зависимости"
+        k0_learned_lin, b_learned_lin
     )
 
 
 if __name__ == "__main__":
     main()
+
 
 '''
 1. Что такое градиентный спуск и как он используется в машинном обучении?
@@ -374,54 +443,7 @@ if __name__ == "__main__":
 
 
 2. Что такое градиент в контексте градиентного спуска?
-Градиент — это вектор из частных производных функции по всем её параметрам.
-Если представить, что у нас есть функция потерь F(w1, w2, ..., wn),
-то градиент ∇F — это набор производных dF/dw1, dF/dw2, ..., dF/dwn.
-Важные моменты:
-    - градиент указывает направление наиболее быстрого роста функции;
-    - если двигаться в сторону, противоположную градиенту (по антиградиенту), то мы идём к уменьшению значения функции.
-В градиентном спуске мы как раз используем антиградиент, чтобы уменьшать функцию потерь и улучшать качество модели.
-
-
-3. Как обновляются веса в градиентном спуске?
-Веса обновляются по формуле:
-    w_{new} = w_{old} - η * ∇F(w_{old})
-где:
-    w_{old}  — старые значения весов (вектор параметров модели),
-    w_{new}  — новые значения весов после шага градиентного спуска,
-    η (эта)  — скорость обучения (learning rate), малая положительная константа,
-    ∇F(w)    — градиент функции потерь по весам.
-Смысл:
-    - градиент показывает, в какую сторону функция растёт сильнее всего
-    - мы вычитаем η * ∇F, то есть делаем небольшой шаг в противоположную сторону, уменьшая значение функции потерь
-    - повторяя это много раз, мы постепенно приближаемся к минимуму функции.
-
-
-4. Что такое тензор во фреймворках?
-Тензор — это обобщение скаляров, векторов и матриц.
-В практическом смысле в TensorFlow/PyTorch тензор можно воспринимать как
-многомерный массив чисел (например, 1D, 2D, 3D, 4D массив и выше).
-Примеры:
-    - скаляр (одно число) — тензор нулевого порядка
-    - вектор (строка чисел) — тензор первого порядка
-    - матрица (таблица чисел) — тензор второго порядка
-    - «куб» чисел (например, изображение с каналами) — тензор третьего порядка.
-Во фреймворках тензоры:
-    - хранят данные и веса моделей
-    - могут эффективно обрабатываться на CPU и GPU
-    - поддерживают операции дифференцирования (автоматический подсчёт градиентов),
-      что нужно для обучения нейросетей методом градиентного спуска.
-
-
-5. По какой причине метод градиентного спуска может остановиться в задаче оптимизации функции потерь?
-Основные причины:
-    1)  Градиент почти равен нулю.
-        Это означает, что мы находимся в точке минимума (локального или глобального),
-        либо на плато/седловой точке, где изменение функции по параметрам слабое.
-        В этом случае шаги обновления становятся очень маленькими, и веса практически перестают меняться.
-    2)  Достигнут лимит по количеству итераций (эпох).
-        Алгоритм останавливается, потому что мы сами задали ограничение на длительность обучения.
-    3)  Слишком маленькая скорость обучения.
+...
         Шаги получаются настолько малы, что дальнейшие изменения весов не видны
         на практике, и кажется, что алгоритм «застыл».
 В корректно настроенном обучении основная ожидаемая причина остановки — градиент близок к нулю, 

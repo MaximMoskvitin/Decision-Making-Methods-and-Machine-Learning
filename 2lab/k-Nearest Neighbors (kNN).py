@@ -42,7 +42,7 @@ def generate_synthetic_clusters(n_samples=300,
     if class_probs is None:
         class_probs = np.ones(n_classes) / n_classes
     else:
-        class_probs = np.asarray(class_probs)
+        class_probs = np.asarray(class_probs, dtype=float)
         class_probs = class_probs / class_probs.sum()
 
     if random_state is None:
@@ -337,6 +337,14 @@ def run_synthetic_experiments():
         print("Форма тестовой выборки X_test:", X_test.shape)
         print("Форма истинных меток y_test:", y_test.shape, end='\n\n')
 
+        # небольшая статистика по классам
+        unique_classes, counts_train = np.unique(y_train, return_counts=True)
+        _, counts_test = np.unique(y_test, return_counts=True)
+        print("Распределение классов (train / test):")
+        for cls, c_tr, c_te in zip(unique_classes, counts_train, counts_test):
+            print(f"  класс {cls}: train = {c_tr}, test = {c_te}")
+        print()
+
         if exp["use_scaling"]:
             X_train_used, X_test_used, _ = scale_data(X_train, X_test)
             print("Признаки нормированы (StandardScaler).\n")
@@ -427,7 +435,7 @@ def load_and_preprocess_diabetes(test_size=0.2, random_state=42):
     n_missing = X.isna().sum().sum()
     print("Количество явных пропусков (NaN) в признаках:", n_missing)
 
-    # В этом датасете пропуски закодированы нулями — считаем количество нулей
+    # В этом датасете пропуски часто закодированы нулями — считаем количество нулей
     print("Количество нулевых значений по каждому признаку (будем считать их пропусками):")
     print((X == 0).sum(), end='\n\n')
 
@@ -455,6 +463,12 @@ def load_and_preprocess_diabetes(test_size=0.2, random_state=42):
 
     print("Размер обучающей выборки X_train:", X_train.shape)
     print("Размер тестовой выборки X_test:", X_test.shape, end='\n\n')
+
+    print("Распределение классов в обучающей выборке:")
+    print(y_train.value_counts(), end='\n\n')
+
+    print("Распределение классов в тестовой выборке:")
+    print(y_test.value_counts(), end='\n\n')
 
     # Нормировка признаков (StandardScaler), отдельно по train и test
     scaler = StandardScaler()
@@ -529,6 +543,11 @@ def run_diabetes_experiment():
 # ==========================
 
 def main():
+    """
+    Точка входа:
+      - запускает эксперименты на синтетических данных (Часть 1)
+      - запускает эксперименты на реальном датасете диабета (Часть 2)
+    """
     # фиксируем seed для воспроизводимости
     np.random.seed(42)
 
