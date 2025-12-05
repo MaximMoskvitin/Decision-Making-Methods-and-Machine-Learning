@@ -1,38 +1,70 @@
+Вот обновлённый вариант README с учётом того, что у тебя уже реально сделано в ЛР и в коде:
+
+---
+
 # Decision-Making Methods and Machine Learning
 
 This repository contains student laboratory work for the course **“Decision-Making Methods and Machine Learning”**. It brings together Python implementations and experiment notebooks for classic machine learning methods and neural network architectures, with a focus on decision-making, approximation, and analysis of data.
+Lab statements (in Russian) with task descriptions and control questions are also included as PDFs in the repository.
 
 ## Contents
 
-* **Lab 1 – Gradient Descent:**
-  Polynomial and linear regression on synthetic data, implemented with gradient descent; visualization of generated samples, learned curves, and loss decrease over iterations. 
+**Lab 1 – Gradient Descent**
+Polynomial and linear regression on synthetic 1D data, implemented with gradient descent in TensorFlow. The lab covers synthetic data generation (uniform inputs + Gaussian noise), training quadratic and linear models, visualizing samples and fitted curves, and tracking MSE loss over epochs on train/test splits. 
 
-* **Lab 2 – k-Nearest Neighbors (kNN):**
-  kNN classification on synthetic 2D data and sklearn datasets (e.g. diabetes or iris); experiments with preprocessing, different values of *k*, class imbalance, and evaluation via accuracy and confusion matrix. 
+**Lab 2 – k-Nearest Neighbors (kNN)**
+kNN classification on synthetic 2D data in the rectangle [0,10] × [0,100] (custom NumPy implementation) and on a real medical dataset (Pima Indians Diabetes from OpenML) using `scikit-learn`. Experiments include:
 
-* **Lab 3 – k-Means Clustering:**
-  Clustering the Wine dataset with k-means; data exploration and scaling, choosing the number of clusters using the elbow method, silhouette score and other internal metrics, plus external metrics such as ARI and NMI. 
+* preprocessing with and without feature scaling,
+* varying the amount of cluster overlap and class imbalance for synthetic data,
+* scanning different values of *k* and distance metrics,
+* evaluation via accuracy and confusion matrix, plus plots of accuracy vs *k* and visualizations of predicted clusters. 
 
-* **Lab 4 – Multilayer Perceptron (MLP):**
-  Function approximation with fully connected neural networks (MLP) using PyTorch / TensorFlow; comparison of architectures by width and depth and analysis of MAPE to find a minimal model that reaches a target accuracy. 
+**Lab 3 – k-Means Clustering**
+Clustering the **Wine** dataset with k-means: data exploration (types, distributions, potential outliers), scaling with `StandardScaler`, and systematic selection of the number of clusters using:
 
-* **Lab 5 – Convolutional Neural Networks (CNNs):**
-  Image classification experiments on **MedMNIST2D** datasets; implementation of baseline CNNs, use of regularization techniques (data augmentation, ensembles, optimizers), and comparison of metrics with those reported in the paper *MedMNIST Classification Decathlon*. 
+* inertia / WCSS (elbow method),
+* silhouette score,
+* Davies–Bouldin index,
+* Calinski–Harabasz score.
 
-* **Lab 6 – Recurrent Neural Networks (RNNs):**
-  Sequence modeling with RNNs for character-level text generation; preparation of text datasets, one-hot encoding, training recurrent models, and evaluation of generated sequences with appropriate metrics. 
+The lab also reports external metrics (Adjusted Rand Index, Normalized Mutual Information) relative to the true wine classes, analyzes clustering stability over multiple random initializations, and visualizes true classes vs clusters in 2D via PCA.
 
-Each lab includes:
+**Lab 4 – Multilayer Perceptron (MLP)**
+Function approximation with fully connected neural networks (MLPs) using PyTorch and/or TensorFlow. According to the lab statement, the goal is to approximate two target functions and to find the smallest architecture (in terms of depth and width / parameter count) that achieves a target accuracy of **MAPE ≤ 10%**, accompanied by plots of MAPE as a function of network width and depth. 
 
-* Structured, well-commented Python code
-* Reproducible experiments and visualizations
-* Short theoretical notes and answers to control questions from the assignments
+**Lab 5 – Convolutional Neural Networks (CNNs)**
+Image classification experiments on one of the **MedMNIST2D** datasets. The lab includes:
+
+* implementation of a baseline CNN,
+* exploration of regularization techniques (data augmentation, ensembles, different optimizers),
+* comparison of obtained metrics (e.g., AUC, accuracy) with those reported in the *“MedMNIST Classification Decathlon”* paper,
+* discussion of how regularization changes performance. 
+
+**Lab 6 – Recurrent Neural Networks (RNNs)**
+Sequence modeling with recurrent neural networks for sequential data. The lab follows the statement:
+
+* studying the basics of RNNs,
+* building and training an RNN model,
+* applying it to either time series forecasting or character-level text generation,
+* evaluating the quality of predictions (e.g., via error metrics for time series or perplexity / qualitative analysis for generated text). 
+
+---
+
+## Each lab includes
+
+* Structured, well-commented Python code (`.py` scripts).
+* Jupyter notebooks (`.ipynb`) with reproducible experiments and visualizations (where available).
+* Short theoretical notes and answers to control questions from the assignments (in Russian, embedded in code comments and/or notebooks).
+* Lab statements as PDF files describing tasks, theory, and control questions.
+
+---
 
 ## Technologies
 
 * **Language:** Python 3.10
 * **Core libraries:** NumPy, pandas, scikit-learn
-* **Deep learning:** PyTorch and/or TensorFlow (depending on lab)
-* **Visualization:** Matplotlib (and optionally Seaborn / other tools)
+* **Deep learning:** TensorFlow and/or PyTorch (depending on the lab)
+* **Visualization:** Matplotlib
 
 This repository is intended as an educational resource showcasing step-by-step implementations of fundamental decision-making and machine learning methods in a student setting.
