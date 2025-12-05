@@ -26,9 +26,9 @@ def generate_synthetic_clusters(n_samples=300,
     if class_centers is None:
         # три кластера: левый нижний угол, центр, правый верхний угол
         class_centers = np.array([
-            [2.0, 20.0],   # красные (условно)
-            [5.0, 50.0],   # синие
-            [8.0, 80.0]    # зелёные
+            [2.0, 20.0],  # красные (условно)
+            [5.0, 50.0],  # синие
+            [8.0, 80.0]  # зелёные
         ])
     else:
         class_centers = np.asarray(class_centers)
@@ -298,7 +298,7 @@ def run_synthetic_experiments():
         },
         {
             "name": "Сильное пересечение кластеров, сбалансированные классы, с нормализацией",
-            "class_stds": [2.0, 2.0, 2.0],
+            "class_stds": [3.0, 3.0, 3.0],
             "class_probs": [1 / 3, 1 / 3, 1 / 3],
             "use_scaling": True
         },
@@ -347,10 +347,16 @@ def run_synthetic_experiments():
 
         if exp["use_scaling"]:
             X_train_used, X_test_used, _ = scale_data(X_train, X_test)
-            print("Признаки нормированы (StandardScaler).\n")
+            print("Признаки нормированы (StandardScaler).")
+            # Проверка, что нормировка реально что-то меняет
+            print("Пример X_train ДО нормировки:\n", X_train[:3])
+            print("Пример X_train ПОСЛЕ нормировки:\n", X_train_used[:3], "\n")
         else:
             X_train_used, X_test_used = X_train, X_test
-            print("Признаки НЕ нормировались.\n")
+            print("Признаки НЕ нормировались.")
+            # Проверка, что мы действительно используем исходные данные
+            print("Проверка: X_train_used совпадает с X_train:",
+                  np.allclose(X_train_used, X_train), "\n")
 
         accuracies = []
 
@@ -560,7 +566,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 '''
 1. Что такое алгоритм k-ближайших соседей?
