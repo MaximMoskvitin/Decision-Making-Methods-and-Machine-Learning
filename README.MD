@@ -1,7 +1,3 @@
-Вот обновлённый вариант README с учётом того, что у тебя уже реально сделано в ЛР и в коде:
-
----
-
 # Decision-Making Methods and Machine Learning
 
 This repository contains student laboratory work for the course **“Decision-Making Methods and Machine Learning”**. It brings together Python implementations and experiment notebooks for classic machine learning methods and neural network architectures, with a focus on decision-making, approximation, and analysis of data.
@@ -55,7 +51,6 @@ Sequence modeling with recurrent neural networks for sequential data. The lab fo
 * Structured, well-commented Python code (`.py` scripts).
 * Jupyter notebooks (`.ipynb`) with reproducible experiments and visualizations (where available).
 * Short theoretical notes and answers to control questions from the assignments (in Russian, embedded in code comments and/or notebooks).
-* Lab statements as PDF files describing tasks, theory, and control questions.
 
 ---
 
