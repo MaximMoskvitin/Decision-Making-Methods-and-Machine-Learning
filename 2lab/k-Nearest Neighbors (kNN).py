@@ -171,12 +171,47 @@ def print_confusion_matrix(cm, class_labels=None):
     if class_labels is None:
         class_labels = [str(i) for i in range(cm.shape[0])]
 
-    header = "true\\pred".ljust(10) + "".join(label.rjust(10) for label in class_labels)
+    header = "true\\pred".ljust(10) + " ".join(label.rjust(10) for label in class_labels)
     print(header)
     for i, row in enumerate(cm):
-        row_str = class_labels[i].ljust(10) + "".join(str(x).rjust(10) for x in row)
+        row_str = class_labels[i].ljust(10) + " ".join(str(x).rjust(10) for x in row)
         print(row_str)
     print()
+
+
+def plot_diabetes_feature_scatter(X, y, feature_x, feature_y, title):
+    """
+    Визуализация распределения пациентов по двум признакам.
+    Точки окрашены по классу (есть диабет / нет диабета).
+    """
+    plt.figure(figsize=(6, 5))
+
+    x_vals = X[feature_x].values
+    y_vals = X[feature_y].values
+
+    classes = np.unique(y)
+    colors = ["blue", "red", "green", "orange"]
+    color_map = {cls: colors[i % len(colors)] for i, cls in enumerate(classes)}
+
+    for cls in classes:
+        mask = (y == cls)
+        plt.scatter(
+            x_vals[mask],
+            y_vals[mask],
+            c=color_map[cls],
+            label=str(cls),
+            alpha=0.6,
+            edgecolors="k",
+            s=40,
+        )
+
+    plt.xlabel(feature_x)
+    plt.ylabel(feature_y)
+    plt.title(title)
+    plt.grid(True)
+    plt.legend(title="Класс")
+    plt.tight_layout()
+    plt.show()
 
 
 # ==========================
@@ -284,27 +319,27 @@ def run_synthetic_experiments():
 
     # три кластера по условию: левый нижний угол, центр, правый верхний
     base_centers = np.array([
-        [2.0, 20.0],
-        [5.0, 50.0],
-        [8.0, 80.0]
+        [2.0, 18.0],
+        [4.0, 25.0],
+        [6.0, 32.0]
     ])
 
     experiments = [
         {
             "name": "Малое пересечение кластеров, сбалансированные классы, без нормализации",
-            "class_stds": [0.8, 0.8, 0.8],
+            "class_stds": [1.7, 1.7, 1.7],
             "class_probs": [1 / 3, 1 / 3, 1 / 3],
             "use_scaling": False
         },
         {
             "name": "Сильное пересечение кластеров, сбалансированные классы, с нормализацией",
-            "class_stds": [3.0, 3.0, 3.0],
+            "class_stds": [3.5, 3.5, 3.5],
             "class_probs": [1 / 3, 1 / 3, 1 / 3],
             "use_scaling": True
         },
         {
             "name": "Диспропорция классов (0.6, 0.3, 0.1), с нормализацией",
-            "class_stds": [1.5, 1.5, 1.5],
+            "class_stds": [2.0, 2.0, 2.0],
             "class_probs": [0.6, 0.3, 0.1],
             "use_scaling": True
         }
@@ -465,6 +500,24 @@ def load_and_preprocess_diabetes(test_size=0.2, random_state=42):
         test_size=test_size,
         random_state=random_state,
         stratify=y
+    )
+    # -----------------------------
+    # Визуализация распределения пациентов по двум признакам
+    # -----------------------------
+
+    # Попробуем взять осмысленные признаки, если они есть в данных
+    # В классическом наборе Pima Indians Diabetes это 'plas' (глюкоза) и 'mass' (BMI)
+    feature_x = 'plas' if 'plas' in X_imputed.columns else X_imputed.columns[0]
+    feature_y = 'mass' if 'mass' in X_imputed.columns else X_imputed.columns[1]
+
+    print(f"Для визуализации используем признаки: {feature_x} и {feature_y}\n")
+
+    plot_diabetes_feature_scatter(
+        X_imputed,
+        y,
+        feature_x=feature_x,
+        feature_y=feature_y,
+        title=f'Диабет: распределение по признакам {feature_x} и {feature_y}'
     )
 
     print("Размер обучающей выборки X_train:", X_train.shape)
